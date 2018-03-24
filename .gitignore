@@ -73,3 +73,9 @@ Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+#Temp files
+*~
+
+#Archives
+*.[oa]
