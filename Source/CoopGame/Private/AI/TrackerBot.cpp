@@ -8,6 +8,10 @@
 #include "GameFramework/Character.h"
 #include "DrawDebugHelpers.h"
 #include "ShooterHealthComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "Components/SphereComponent.h"
+#include "ShooterCharacter.h"
+#include "Sound/SoundCue.h"
 
 
 // Sets default values
@@ -24,9 +28,21 @@ ATrackerBot::ATrackerBot()
 	HealthComp = CreateDefaultSubobject<UShooterHealthComponent>(TEXT("HealthComp"));
 	HealthComp->OnHeathChangedEvent.AddDynamic(this, &ATrackerBot::HandleTakeDamage);
 
+	DetectionRadius = 200;
+
+	SphereComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
+	SphereComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	SphereComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+	SphereComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	SphereComp->SetSphereRadius(DetectionRadius);
+	SphereComp->SetupAttachment(RootComponent);
+
 	AcceptanceRadius = 100;
 	ForceValue = 1000;
 	bUseVelocityChange = true;
+
+	ExplosionDamage = 40;
+	ExplosionRadius = 200;
 
 }
 
@@ -60,8 +76,67 @@ void ATrackerBot::HandleTakeDamage(UShooterHealthComponent* HealthComponent, flo
     //Explode on health == 0
 
 	//Pulse material on take damage
+	if (MatInst == nullptr)
+	{
+		MatInst = MeshComp->CreateAndSetMaterialInstanceDynamicFromMaterial(0, MeshComp->GetMaterial(0));
+	}
+
+	if (MatInst)
+	{
+		MatInst->SetScalarParameterValue("LastTimeDamageTaken", GetWorld()->TimeSeconds);
+	}
 
 
+	if (Health <= 0)
+	{
+		SelfDestruct();
+	}
+}
+
+void ATrackerBot::SelfDestruct()
+{
+	if (bExploded)
+	{
+		return;
+	}
+
+	bExploded = true;
+
+	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
+
+	TArray<AActor*> IgnoreActors;
+	IgnoreActors.Add(this);
+
+	UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoreActors, this, GetInstigatorController(), true);
+
+	UGameplayStatics::PlaySoundAtLocation(this, ExplodeSound, GetActorLocation());
+
+	Destroy();
+}
+
+void ATrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
+{
+	if (!bStartedSelfDestruction)
+	{
+		if (OtherActor)
+		{
+			AShooterCharacter* Char = Cast<AShooterCharacter>(OtherActor);
+
+			if (Char)
+			{
+				GetWorldTimerManager().SetTimer(TimerHandle_DamageSelf, this, &ATrackerBot::DamageSelf, 0.5f, true, 0.0f);
+
+				bStartedSelfDestruction = true;
+
+				UGameplayStatics::SpawnSoundAttached(SelfDestructSound, RootComponent);
+			}
+		}
+	}
+}
+
+void ATrackerBot::DamageSelf()
+{
+	UGameplayStatics::ApplyDamage(this, 20, GetInstigatorController(), this, nullptr);
 }
 
 // Called every frame

@@ -8,6 +8,9 @@
 
 class UStaticMeshComponent;
 class UShooterHealthComponent;
+class UMaterialInstanceDynamic;
+class USphereComponent;
+class USoundCue;
 
 UCLASS()
 class COOPGAME_API ATrackerBot : public APawn
@@ -28,10 +31,37 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	UShooterHealthComponent * HealthComp;
 
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+	USphereComponent* SphereComp;
+
 	FVector GetNextPathPoint();
 
 	UFUNCTION()
 	void HandleTakeDamage(UShooterHealthComponent* HealthComponent, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
+
+	void SelfDestruct();
+
+	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
+
+	void DamageSelf();
+
+	FTimerHandle TimerHandle_DamageSelf;
+
+	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
+	UParticleSystem* ExplosionEffect;
+
+	bool bExploded;
+
+	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
+	float ExplosionRadius;
+
+	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
+	float ExplosionDamage;
+
+	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
+	float DetectionRadius;
+
+	UMaterialInstanceDynamic* MatInst;
 
 	FVector NextPathPoint;
 
@@ -41,8 +71,16 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
 	bool bUseVelocityChange;
 
+	bool bStartedSelfDestruction;
+
 	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
 	float AcceptanceRadius;
+
+	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
+	USoundCue* SelfDestructSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
+	USoundCue* ExplodeSound;
 
 public:	
 	// Called every frame
