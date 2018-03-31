@@ -12,6 +12,8 @@
 #include "Components/SphereComponent.h"
 #include "ShooterCharacter.h"
 #include "Sound/SoundCue.h"
+#include "Net/UnrealNetwork.h"
+
 
 
 // Sets default values
@@ -43,32 +45,89 @@ ATrackerBot::ATrackerBot()
 
 	ExplosionDamage = 40;
 	ExplosionRadius = 200;
+	SightRadius = 2500;
 
+	SetReplicates(true);
+	SetReplicateMovement(true);
 }
 
 // Called when the game starts or when spawned
 void ATrackerBot::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	NextPathPoint = GetNextPathPoint();
+	if (Role == ROLE_Authority)
+	{
+		GetWorldTimerManager().SetTimer(TimerHandle_SearchEnemy, this, &ATrackerBot::SearchEnemy, 1.0f, true);
+
+		NextPathPoint = GetNextPathPoint(CurrentEnemy);
+	}
 }
 
-FVector ATrackerBot::GetNextPathPoint()
+FVector ATrackerBot::GetNextPathPoint(AActor* GoalActor)
 {
-	//Hack
-	ACharacter* GoalPawn = UGameplayStatics::GetPlayerCharacter(this, 0);
-
-	UNavigationPath* Path = UNavigationSystem::FindPathToActorSynchronously(this, GetActorLocation(), GoalPawn);
-
-	if (Path->PathPoints.Num() > 1)
+	if (GoalActor)
 	{
-		return Path->PathPoints[1];
+		UNavigationPath* Path = UNavigationSystem::FindPathToActorSynchronously(this, GetActorLocation(), GoalActor);
+
+		if (Path->PathPoints.Num() > 1)
+		{
+			return Path->PathPoints[1];
+		}
 	}
+
 
 	//Failed
 	return GetActorLocation();
+}
 
+bool ATrackerBot::GetEnemy(AActor* &Enemy)
+{
+	TArray<AActor*> OverlapedActors;
+
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjctTypes;
+
+	TEnumAsByte<EObjectTypeQuery> ObjctType = EObjectTypeQuery::ObjectTypeQuery3;
+
+	ObjctTypes.Add(ObjctType);
+
+	TArray<AActor*> IgnoreActors;
+	IgnoreActors.Add(this);
+
+	ACharacter* Char;
+
+	UClass* FilterClass = Char->StaticClass();
+
+	OverlapedActors.Empty();
+
+	UKismetSystemLibrary::SphereOverlapActors(this, GetActorLocation(), SightRadius, ObjctTypes, FilterClass, IgnoreActors, OverlapedActors);
+
+	if (OverlapedActors.Num() > 0)
+	{
+		Enemy = OverlapedActors[0];
+
+		if (OverlapedActors.Num() > 1)
+		{
+			float minDist = (OverlapedActors[0]->GetActorLocation() - GetActorLocation()).Size();
+
+			for (size_t i = 1; i < OverlapedActors.Num(); i++)
+			{
+				if ((OverlapedActors[i]->GetActorLocation() - GetActorLocation()).Size() < minDist)
+				{
+					ACharacter* MyChar = Cast<ACharacter>(OverlapedActors[i]);
+
+					if (MyChar)
+					{
+						minDist = (OverlapedActors[i]->GetActorLocation() - GetActorLocation()).Size();
+						Enemy = OverlapedActors[i];
+					}
+				}
+			}
+		}
+
+		return true;
+	}
+
+	return false;
 }
 
 void ATrackerBot::HandleTakeDamage(UShooterHealthComponent* HealthComponent, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)
@@ -86,7 +145,6 @@ void ATrackerBot::HandleTakeDamage(UShooterHealthComponent* HealthComponent, flo
 		MatInst->SetScalarParameterValue("LastTimeDamageTaken", GetWorld()->TimeSeconds);
 	}
 
-
 	if (Health <= 0)
 	{
 		SelfDestruct();
@@ -102,16 +160,22 @@ void ATrackerBot::SelfDestruct()
 
 	bExploded = true;
 
+	MeshComp->SetVisibility(false);
+	MeshComp->SetSimulatePhysics(false);
+	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
 	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
-
-	TArray<AActor*> IgnoreActors;
-	IgnoreActors.Add(this);
-
-	UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoreActors, this, GetInstigatorController(), true);
-
 	UGameplayStatics::PlaySoundAtLocation(this, ExplodeSound, GetActorLocation());
 
-	Destroy();
+	if (Role == ROLE_Authority)
+	{
+		TArray<AActor*> IgnoreActors;
+		IgnoreActors.Add(this);
+
+		UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoreActors, this, GetInstigatorController(), true);
+
+		SetLifeSpan(2.0f);
+	}
 }
 
 void ATrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
@@ -124,7 +188,10 @@ void ATrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
 
 			if (Char)
 			{
-				GetWorldTimerManager().SetTimer(TimerHandle_DamageSelf, this, &ATrackerBot::DamageSelf, 0.5f, true, 0.0f);
+				if (Role == ROLE_Authority)
+				{
+					GetWorldTimerManager().SetTimer(TimerHandle_DamageSelf, this, &ATrackerBot::DamageSelf, 0.5f, true, 0.0f);
+				}
 
 				bStartedSelfDestruction = true;
 
@@ -139,28 +206,59 @@ void ATrackerBot::DamageSelf()
 	UGameplayStatics::ApplyDamage(this, 20, GetInstigatorController(), this, nullptr);
 }
 
+void ATrackerBot::SearchEnemy()
+{
+	if (!bExploded)
+	{
+		AActor* Enemy = nullptr;
+
+		if (GetEnemy(Enemy))
+		{
+			if (!CurrentEnemy)
+			{
+				CurrentEnemy = Enemy;
+
+				NextPathPoint = GetNextPathPoint(CurrentEnemy);
+			}
+			else if (CurrentEnemy != Enemy)
+			{
+				CurrentEnemy = Enemy;
+
+				NextPathPoint = GetNextPathPoint(CurrentEnemy);
+			}
+		}
+		else
+		{
+			NextPathPoint = GetActorLocation();
+		}
+	}
+}
+
 // Called every frame
 void ATrackerBot::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	float Distance = (NextPathPoint - GetActorLocation()).Size();
-
-	if (Distance > AcceptanceRadius)
+	if (Role == ROLE_Authority && !bExploded)
 	{
-		FVector Direction = NextPathPoint - GetActorLocation();
-		Direction.Normalize();
+		float Distance = (NextPathPoint - GetActorLocation()).Size();
 
-		Direction *= ForceValue;
+		if (Distance > AcceptanceRadius)
+		{
+			FVector Direction = NextPathPoint - GetActorLocation();
+			Direction.Normalize();
 
-		MeshComp->AddForce(Direction, NAME_None, bUseVelocityChange);
+			Direction *= ForceValue;
+			
+			MeshComp->AddForce(Direction, NAME_None, bUseVelocityChange);
 
-		DrawDebugSphere(GetWorld(), NextPathPoint, AcceptanceRadius / 4, 12, FColor::Yellow, false, 0);
+			DrawDebugSphere(GetWorld(), NextPathPoint, AcceptanceRadius / 4, 12, FColor::Yellow, false, 0);
+		}
+		else
+		{
+			NextPathPoint = GetNextPathPoint(CurrentEnemy);
+		}
 	}
-	else
-	{
-		NextPathPoint = GetNextPathPoint();
-	}
-
 }
+
 

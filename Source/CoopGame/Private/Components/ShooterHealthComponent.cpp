@@ -30,17 +30,7 @@ void UShooterHealthComponent::BeginPlay()
 		{
 			MyOwner->OnTakeAnyDamage.AddDynamic(this, &UShooterHealthComponent::OnHandleTakeAnydamage);
 		}
-	}
-	else if (GetOwnerRole() < ROLE_Authority)
-	{
-		AActor* MyOwner = GetOwner();
-
-		if (MyOwner)
-		{
-			MyOwner->OnTakeAnyDamage.AddDynamic(this, &UShooterHealthComponent::ClientOnHandleTakeAnydamage);
-		}
-	}
-	
+	}	
 
 	Health = FMath::Clamp(Health, 0.0f, MaxHealth);
 }
@@ -59,16 +49,14 @@ void UShooterHealthComponent::OnHandleTakeAnydamage(AActor* DamagedActor, float 
 		OnHeathChangedEvent.Broadcast(this, Health, Damage, DamageType, InstigatedBy, DamageCauser);
 	}
 	
-
 	UE_LOG(LogTemp, Log, TEXT("Health changed: %s"), *FString::SanitizeFloat(Health));
 }
 
-void UShooterHealthComponent::ClientOnHandleTakeAnydamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)
+void UShooterHealthComponent::OnRep_Health(float OldHealth)
 {
-	if (OnHeathChangedEvent.IsBound())
-	{
-		OnHeathChangedEvent.Broadcast(this, Health, Damage, DamageType, InstigatedBy, DamageCauser);
-	}
+	float Damage = Health - OldHealth;
+
+	OnHeathChangedEvent.Broadcast(this, Health, Damage, nullptr, nullptr, nullptr);
 }
 
 void UShooterHealthComponent::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const

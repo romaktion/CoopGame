@@ -34,7 +34,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	USphereComponent* SphereComp;
 
-	FVector GetNextPathPoint();
+	FVector GetNextPathPoint(AActor* GoalActor);
+
+	bool GetEnemy(AActor* &Enemy);
 
 	UFUNCTION()
 	void HandleTakeDamage(UShooterHealthComponent* HealthComponent, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
@@ -47,10 +49,22 @@ protected:
 
 	FTimerHandle TimerHandle_DamageSelf;
 
+	FTimerHandle TimerHandle_SearchEnemy;
+
+	UFUNCTION()
+	void SearchEnemy();
+
 	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
 	UParticleSystem* ExplosionEffect;
 
 	bool bExploded;
+
+	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
+	float SightRadius;
+
+	AActor* CurrentEnemy;
+
+	FVector CurrentGoalPoint;
 
 	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
 	float ExplosionRadius;
