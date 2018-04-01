@@ -30,22 +30,24 @@ ATrackerBot::ATrackerBot()
 	HealthComp = CreateDefaultSubobject<UShooterHealthComponent>(TEXT("HealthComp"));
 	HealthComp->OnHeathChangedEvent.AddDynamic(this, &ATrackerBot::HandleTakeDamage);
 
-	DetectionRadius = 200;
+	DetectionSelfDestroyRadius = 200;
 
 	SphereComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
 	SphereComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	SphereComp->SetCollisionResponseToAllChannels(ECR_Ignore);
 	SphereComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
-	SphereComp->SetSphereRadius(DetectionRadius);
+	SphereComp->SetSphereRadius(DetectionSelfDestroyRadius);
 	SphereComp->SetupAttachment(RootComponent);
 
-	AcceptanceRadius = 100;
-	ForceValue = 1000;
+	AcceptanceRadius = 300;
+	ForceValue = 1500;
 	bUseVelocityChange = true;
 
 	ExplosionDamage = 40;
-	ExplosionRadius = 200;
+	ExplosionRadius = 300;
 	SightRadius = 2500;
+	DetectAIRadius = 500;
+	MaxPowerLevel = 5;
 
 	SetReplicates(true);
 	SetReplicateMovement(true);
@@ -133,21 +135,23 @@ bool ATrackerBot::GetEnemy(AActor* &Enemy)
 void ATrackerBot::HandleTakeDamage(UShooterHealthComponent* HealthComponent, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)
 {
     //Explode on health == 0
-
-	//Pulse material on take damage
-	if (MatInst == nullptr)
+	if (!bExploded)
 	{
-		MatInst = MeshComp->CreateAndSetMaterialInstanceDynamicFromMaterial(0, MeshComp->GetMaterial(0));
-	}
+		//Pulse material on take damage
+		if (MatInst == nullptr)
+		{
+			MatInst = MeshComp->CreateAndSetMaterialInstanceDynamicFromMaterial(0, MeshComp->GetMaterial(0));
+		}
 
-	if (MatInst)
-	{
-		MatInst->SetScalarParameterValue("LastTimeDamageTaken", GetWorld()->TimeSeconds);
-	}
+		if (MatInst)
+		{
+			MatInst->SetScalarParameterValue("LastTimeDamageTaken", GetWorld()->TimeSeconds);
+		}
 
-	if (Health <= 0)
-	{
-		SelfDestruct();
+		if (Health <= 0)
+		{
+			SelfDestruct();
+		}
 	}
 }
 
@@ -172,7 +176,7 @@ void ATrackerBot::SelfDestruct()
 		TArray<AActor*> IgnoreActors;
 		IgnoreActors.Add(this);
 
-		UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoreActors, this, GetInstigatorController(), true);
+		UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage * FMath::Clamp(PowerLevel, 1, PowerLevel), GetActorLocation(), ExplosionRadius, nullptr, IgnoreActors, this, GetInstigatorController(), true);
 
 		SetLifeSpan(2.0f);
 	}
@@ -231,6 +235,46 @@ void ATrackerBot::SearchEnemy()
 		{
 			NextPathPoint = GetActorLocation();
 		}
+
+		TArray<FOverlapResult> OverlapResults;
+		FCollisionObjectQueryParams QueryParams;
+		QueryParams.AddObjectTypesToQuery(ECC_Pawn);
+		QueryParams.AddObjectTypesToQuery(ECC_PhysicsBody);
+		FCollisionShape CollShape;
+		CollShape.SetSphere(DetectAIRadius);
+
+		GetWorld()->OverlapMultiByObjectType(OverlapResults, GetActorLocation(), FQuat::Identity, QueryParams, CollShape);
+
+		PowerLevel = 0;
+
+		for (FOverlapResult Result : OverlapResults)
+		{
+			ATrackerBot* Bot = Cast<ATrackerBot>(Result.GetActor());
+
+			if (Bot && Bot != this)
+			{
+				PowerLevel++;
+			}
+		}
+
+		PowerLevel = FMath::Clamp(PowerLevel, 0, MaxPowerLevel);
+
+		if (PowerLevel > 0)
+		{
+			if (MatInst == nullptr)
+			{
+				MatInst = MeshComp->CreateAndSetMaterialInstanceDynamicFromMaterial(0, MeshComp->GetMaterial(0));
+			}
+
+			if (MatInst)
+			{
+				float Alpha = PowerLevel / (float)MaxPowerLevel;
+
+
+				MatInst->SetScalarParameterValue("PowerLevelAlpha", Alpha);
+			}
+		}
+
 	}
 }
 

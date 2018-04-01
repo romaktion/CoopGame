@@ -62,6 +62,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
 	float SightRadius;
 
+	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
+	float DetectAIRadius;
+
 	AActor* CurrentEnemy;
 
 	FVector CurrentGoalPoint;
@@ -73,7 +76,12 @@ protected:
 	float ExplosionDamage;
 
 	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
-	float DetectionRadius;
+	float DetectionSelfDestroyRadius;
+
+	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
+	int MaxPowerLevel;
+
+	int PowerLevel;
 
 	UMaterialInstanceDynamic* MatInst;
 
