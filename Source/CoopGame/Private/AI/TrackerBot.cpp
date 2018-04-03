@@ -184,6 +184,8 @@ void ATrackerBot::SelfDestruct()
 
 void ATrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
 {
+	Super::NotifyActorBeginOverlap(OtherActor);
+
 	if (!bStartedSelfDestruction)
 	{
 		if (OtherActor)

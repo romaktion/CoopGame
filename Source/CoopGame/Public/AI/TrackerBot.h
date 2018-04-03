@@ -43,8 +43,6 @@ protected:
 
 	void SelfDestruct();
 
-	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
-
 	void DamageSelf();
 
 	FTimerHandle TimerHandle_DamageSelf;
@@ -108,5 +106,5 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	
+	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
 };
