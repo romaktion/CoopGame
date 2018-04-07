@@ -49,14 +49,34 @@ void UShooterHealthComponent::OnHandleTakeAnydamage(AActor* DamagedActor, float 
 		OnHeathChangedEvent.Broadcast(this, Health, Damage, DamageType, InstigatedBy, DamageCauser);
 	}
 	
-	UE_LOG(LogTemp, Log, TEXT("Health changed: %s"), *FString::SanitizeFloat(Health));
+	UE_LOG(LogTemp, Log, TEXT("Health changed: %s (-%s)"), *FString::SanitizeFloat(Health), *FString::SanitizeFloat(Damage));
 }
 
 void UShooterHealthComponent::OnRep_Health(float OldHealth)
 {
 	float Damage = Health - OldHealth;
 
-	OnHeathChangedEvent.Broadcast(this, Health, Damage, nullptr, nullptr, nullptr);
+	if (OnHeathChangedEvent.IsBound())
+	{
+		OnHeathChangedEvent.Broadcast(this, Health, Damage, nullptr, nullptr, nullptr);
+	}
+}
+
+void UShooterHealthComponent::Heal(float AmountOfHeal)
+{
+	if (AmountOfHeal <= 0 || Health <= 0)
+	{
+		return;
+	}
+
+	Health = FMath::Clamp(Health + AmountOfHeal, 0.0f, MaxHealth);
+
+	if (OnHeathChangedEvent.IsBound())
+	{
+		OnHeathChangedEvent.Broadcast(this, Health, -AmountOfHeal, nullptr, nullptr, nullptr);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("Health changed: %s (+%s)"), *FString::SanitizeFloat(Health), *FString::SanitizeFloat(AmountOfHeal));
 }
 
 void UShooterHealthComponent::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const

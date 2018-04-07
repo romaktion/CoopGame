@@ -38,4 +38,7 @@ public:
 	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadOnly, Category = "HealthComponent")
 	float MaxHealth;
 
+	UFUNCTION(BlueprintCallable, Category = "HealthComponent")
+	void Heal(float AmountOfHeal);
+
 };
