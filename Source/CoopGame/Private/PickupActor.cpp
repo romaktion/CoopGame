@@ -20,6 +20,8 @@ APickupActor::APickupActor()
 	DecalComp->SetupAttachment(SphereComp);
 
 	CooldownDuration = 10.0f;
+
+	SetReplicates(true);
 }
 
 // Called when the game starts or when spawned
@@ -27,7 +29,10 @@ void APickupActor::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	Respawn();
+	if (Role == ROLE_Authority)
+	{
+		Respawn();
+	}
 }
 
 void APickupActor::Respawn()
@@ -53,9 +58,9 @@ void APickupActor::NotifyActorBeginOverlap(AActor* OtherActor)
 {
 	Super::NotifyActorBeginOverlap(OtherActor);
 
-	if (PowerupInstance)
+	if (Role == ROLE_Authority && PowerupInstance)
 	{
-		PowerupInstance->ActivatePowerUp();
+		PowerupInstance->ActivatePowerUp(OtherActor);
 		PowerupInstance = nullptr;
 
 		GetWorldTimerManager().SetTimer(TimerHandle_RespawnTimer, this, &APickupActor::Respawn, CooldownDuration);

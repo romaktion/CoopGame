@@ -28,16 +28,18 @@ public:
 	UFUNCTION()
 	void OnPowerUpTick();
 
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+	UPROPERTY(ReplicatedUsing=OnRep_PowerupActive)
+	bool bIsPowerupActive;
+
+	UFUNCTION()
+	void OnRep_PowerupActive();
 
 public:
 
-	void ActivatePowerUp();
+	void ActivatePowerUp(AActor* ActivateFor);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "PowerUps")
-	void OnActivated();
+	void OnActivated(AActor* ActivateFor);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "PowerUps")
 	void OnExpiried();

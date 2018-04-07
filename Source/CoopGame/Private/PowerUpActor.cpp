@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "PowerUpActor.h"
+#include "Net/UnrealNetwork.h"
 
 
 // Sets default values
@@ -9,17 +10,31 @@ APowerUpActor::APowerUpActor()
 	PowerupInterval = 0.0f;
 	MaxNrOfTick = 0;
 	TickIterator = 0;
+
+	bIsPowerupActive = false;
+
+	SetReplicates(true);
+
 }
 
 
-// Called when the game starts or when spawned
-void APowerUpActor::BeginPlay()
+void APowerUpActor::OnRep_PowerupActive()
 {
-	Super::BeginPlay();
+	if (Role < ROLE_Authority)
+	{
+		if (bIsPowerupActive)
+		{
+			OnActivated(nullptr);
+		}
+		else
+		{
+			OnExpiried();
+		}
+	}
 }
 
 
-void APowerUpActor::ActivatePowerUp()
+void APowerUpActor::ActivatePowerUp(AActor* ActivateFor)
 {
 	if (PowerupInterval > 0.0f)
 	{
@@ -30,7 +45,9 @@ void APowerUpActor::ActivatePowerUp()
 		OnPowerUpTick();
 	}
 
-	OnActivated();
+	OnActivated(ActivateFor);
+
+	bIsPowerupActive = true;
 }
 
 void APowerUpActor::OnPowerUpTick()
@@ -41,8 +58,18 @@ void APowerUpActor::OnPowerUpTick()
 	{
 		OnExpiried();
 
+		bIsPowerupActive = false;
+
 		GetWorldTimerManager().ClearTimer(TimerHandle_PowerUpTick);
 	}
 
 	OnPowerupTicked();
+}
+
+
+void APowerUpActor::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(APowerUpActor, bIsPowerupActive);
 }
