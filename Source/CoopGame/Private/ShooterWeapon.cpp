@@ -148,11 +148,26 @@ void AShooterWeapon::Fire()
 					{
 						MaxAngle *= 0.5f;
 					}
+
+					if (MyOwnerCasted->bIsCrouched)
+					{
+						MaxAngle *= 0.5f;
+					}
 				}
+
 
 				if (QueueAmount < MaxAngle)
 				{
 					QueueAmount += SpreadingRate;
+				}
+				else
+				{
+					QueueAmount -= SpreadingRate;
+					
+					if (QueueAmount < 0)
+					{
+						QueueAmount = 0;
+					}
 				}
 			}
 

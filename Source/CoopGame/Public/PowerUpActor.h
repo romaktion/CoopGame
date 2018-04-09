@@ -28,6 +28,8 @@ public:
 	UFUNCTION()
 	void OnPowerUpTick();
 
+	virtual void LastTick();
+
 	UPROPERTY(ReplicatedUsing=OnRep_PowerupActive)
 	bool bIsPowerupActive;
 
@@ -36,7 +38,7 @@ public:
 
 public:
 
-	void ActivatePowerUp(AActor* ActivateFor);
+	virtual void ActivatePowerUp(AActor* ActivateFor);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "PowerUps")
 	void OnActivated(AActor* ActivateFor);
@@ -46,5 +48,4 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "PowerUps")
 	void OnPowerupTicked();
-	
 };

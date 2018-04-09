@@ -56,16 +56,24 @@ void APowerUpActor::OnPowerUpTick()
 
 	if (TickIterator >= MaxNrOfTick)
 	{
+		LastTick();
+	}
+
+	OnPowerupTicked();
+}
+
+
+void APowerUpActor::LastTick()
+{
+	if (bIsPowerupActive)
+	{
 		OnExpiried();
 
 		bIsPowerupActive = false;
 
 		GetWorldTimerManager().ClearTimer(TimerHandle_PowerUpTick);
 	}
-
-	OnPowerupTicked();
 }
-
 
 void APowerUpActor::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
