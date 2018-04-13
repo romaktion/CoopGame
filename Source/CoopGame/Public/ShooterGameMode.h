@@ -6,6 +6,9 @@
 #include "GameFramework/GameModeBase.h"
 #include "ShooterGameMode.generated.h"
 
+enum class EWaveState : uint8;
+
+
 /**
  * 
  */
@@ -17,6 +20,8 @@ class COOPGAME_API AShooterGameMode : public AGameModeBase
 protected:
 
 	FTimerHandle TimerHandle_SpawnBot;
+
+	FTimerHandle TimerHandle_NextWave;
 
 	int32 NbOfBotsToSpawn;
 
@@ -39,11 +44,20 @@ protected:
 
 	void PrepareForNextWave();
 
+	void CheckWaveState();
+
+	void CheckAnyPlayerAlive();
+
+	void GameOver();
+
+	void SetGameState(EWaveState NewState);
+
 public:
 
 	AShooterGameMode();
 
 	virtual void StartPlay() override;
 
+	virtual void Tick(float DeltaSeconds) override;
 
 };

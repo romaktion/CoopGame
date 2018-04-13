@@ -314,7 +314,7 @@ float AShooterCharacter::GetHealth()
 {
 	if (HealthComp)
 	{
-		return HealthComp->Health;
+		return HealthComp->GetHealth();
 	}
 
 	return 0;
@@ -324,7 +324,7 @@ float AShooterCharacter::GetMaxHealth()
 {
 	if (HealthComp)
 	{
-		return HealthComp->MaxHealth;
+		return HealthComp->GetMaxHealth();
 	}
 
 	return 0;

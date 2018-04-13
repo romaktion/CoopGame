@@ -79,6 +79,16 @@ void UShooterHealthComponent::Heal(float AmountOfHeal)
 	UE_LOG(LogTemp, Log, TEXT("Health changed: %s (+%s)"), *FString::SanitizeFloat(Health), *FString::SanitizeFloat(AmountOfHeal));
 }
 
+float UShooterHealthComponent::GetHealth() const
+{
+	return Health;
+}
+
+float UShooterHealthComponent::GetMaxHealth() const
+{
+	return MaxHealth;
+}
+
 void UShooterHealthComponent::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
