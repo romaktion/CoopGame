@@ -47,6 +47,7 @@ ATrackerBot::ATrackerBot()
 	ExplosionRadius = 300;
 	SightRadius = 2500;
 	DetectAIRadius = 500;
+	PowerLevel = 0;
 	MaxPowerLevel = 5;
 
 	SetReplicates(true);
@@ -280,6 +281,28 @@ void ATrackerBot::SearchEnemy()
 	}
 }
 
+void ATrackerBot::OnRep_PowerLevel()
+{
+	if (Role < ROLE_Authority)
+	{
+		if (PowerLevel > 0)
+		{
+			if (MatInst == nullptr)
+			{
+				MatInst = MeshComp->CreateAndSetMaterialInstanceDynamicFromMaterial(0, MeshComp->GetMaterial(0));
+			}
+
+			if (MatInst)
+			{
+				float Alpha = PowerLevel / (float)MaxPowerLevel;
+
+
+				MatInst->SetScalarParameterValue("PowerLevelAlpha", Alpha);
+			}
+		}
+	}
+}
+
 // Called every frame
 void ATrackerBot::Tick(float DeltaTime)
 {
@@ -308,3 +331,9 @@ void ATrackerBot::Tick(float DeltaTime)
 }
 
 
+void ATrackerBot::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ATrackerBot, PowerLevel);
+}

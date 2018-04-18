@@ -5,6 +5,7 @@
 #include "Components/DecalComponent.h"
 #include "PowerUpActor.h"
 #include "TimerManager.h"
+#include "ShooterCharacter.h"
 
 
 // Sets default values
@@ -60,12 +61,16 @@ void APickupActor::NotifyActorBeginOverlap(AActor* OtherActor)
 
 	if (Role == ROLE_Authority && PowerupInstance)
 	{
-		PowerupInstance->ActivatePowerUp(OtherActor);
-		PowerupInstance = nullptr;
+		AShooterCharacter* SC = Cast<AShooterCharacter>(OtherActor);
 
-		GetWorldTimerManager().SetTimer(TimerHandle_RespawnTimer, this, &APickupActor::Respawn, CooldownDuration);
+		if (SC)
+		{
+			PowerupInstance->ActivatePowerUp(OtherActor);
+			PowerupInstance = nullptr;
+
+			GetWorldTimerManager().SetTimer(TimerHandle_RespawnTimer, this, &APickupActor::Respawn, CooldownDuration);
+		}
 	}
-
 }
 
 

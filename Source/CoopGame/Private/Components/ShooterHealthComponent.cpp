@@ -2,6 +2,7 @@
 
 #include "ShooterHealthComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "ShooterGameMode.h"
 
 
 // Sets default values for this component's properties
@@ -10,6 +11,8 @@ UShooterHealthComponent::UShooterHealthComponent()
 	MaxHealth = 100.0f;
 
 	Health = 100.0f;
+
+	bIsDead = false;
 
 	SetIsReplicated(true);
 }
@@ -37,7 +40,7 @@ void UShooterHealthComponent::BeginPlay()
 
 void UShooterHealthComponent::OnHandleTakeAnydamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser)
 {
-	if (Damage <= 0)
+	if (Damage <= 0 || bIsDead)
 	{
 		return;
 	}
@@ -49,6 +52,20 @@ void UShooterHealthComponent::OnHandleTakeAnydamage(AActor* DamagedActor, float 
 		OnHeathChangedEvent.Broadcast(this, Health, Damage, DamageType, InstigatedBy, DamageCauser);
 	}
 	
+	bIsDead = Health <= 0;
+
+	if (bIsDead)
+	{
+		AShooterGameMode* GM = Cast<AShooterGameMode>(GetWorld()->GetAuthGameMode());
+		if (GM)
+		{
+			if (GM->OnActorKilled.IsBound())
+			{
+				GM->OnActorKilled.Broadcast(GetOwner(), DamageCauser, InstigatedBy);
+			}
+		}
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("Health changed: %s (-%s)"), *FString::SanitizeFloat(Health), *FString::SanitizeFloat(Damage));
 }
 

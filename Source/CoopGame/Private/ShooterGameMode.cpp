@@ -2,12 +2,14 @@
 
 #include "ShooterGameMode.h"
 #include "ShooterGameState.h"
+#include "ShooterPlayerState.h"
 #include "ShooterHealthComponent.h"
 
 
 AShooterGameMode::AShooterGameMode()
 {
 	GameStateClass = AShooterGameState::StaticClass();
+	PlayerStateClass = AShooterPlayerState::StaticClass();
 
 	TimeBetweenWaves = 2.0f;
 
@@ -27,16 +29,22 @@ void AShooterGameMode::StartWave()
 
 	GetWorldTimerManager().SetTimer(TimerHandle_SpawnBot, this, &AShooterGameMode::SpawnBottimerElapsed, 1.0f, true, 0.0f);
 
+
+	SetWaveState(EWaveState::WaveInProgress);
 }
 
 void AShooterGameMode::EndWave()
 {
 	GetWorldTimerManager().ClearTimer(TimerHandle_SpawnBot);
+
+	SetWaveState(EWaveState::WaitingToComplete);
 }
 
 void AShooterGameMode::PrepareForNextWave()
 {
 	GetWorldTimerManager().SetTimer(TimerHandle_NextWave, this, &AShooterGameMode::StartWave, TimeBetweenWaves, false);
+
+	SetWaveState(EWaveState::WaitingToStart);
 }
 
 void AShooterGameMode::CheckWaveState()
@@ -75,6 +83,8 @@ void AShooterGameMode::CheckWaveState()
 
 	if (!bIsAnyAliveBot)
 	{
+		SetWaveState(EWaveState::WaveComplete);
+
 		PrepareForNextWave();
 	}
 
@@ -84,9 +94,12 @@ void AShooterGameMode::CheckAnyPlayerAlive()
 {
 	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 	{
-		if (It && It->GetPawnOrSpectator())
+		APlayerController* PC = It->Get();
+
+
+		if (PC && PC->GetPawn())
 		{
-			APawn* TestPawn = It->GetPawnOrSpectator();
+			APawn* TestPawn = PC->GetPawn();
 
 			UShooterHealthComponent* HealthComp = Cast<UShooterHealthComponent>(TestPawn->GetComponentByClass(UShooterHealthComponent::StaticClass()));
 
@@ -101,24 +114,25 @@ void AShooterGameMode::CheckAnyPlayerAlive()
 	}
 
 	GameOver();
-
 }
 
 void AShooterGameMode::GameOver()
 {
 	EndWave();
+
+	SetWaveState(EWaveState::GameOver);
+
+	UE_LOG(LogTemp, Log, TEXT("GAME OVER! All Player Died"));
 }
 
-void AShooterGameMode::SetGameState(EWaveState NewState)
+void AShooterGameMode::SetWaveState(EWaveState NewState)
 {
 	AShooterGameState* GS = GetGameState<AShooterGameState>();
 
 	if (ensureAlways(GS))
 	{
-		GS->WaveState = NewState;
+		GS->SetWaveState(NewState);
 	}
-
-
 }
 
 void AShooterGameMode::StartPlay()
@@ -138,6 +152,7 @@ void AShooterGameMode::Tick(float DeltaSeconds)
 
 	CheckAnyPlayerAlive();
 }
+
 
 void AShooterGameMode::SpawnBottimerElapsed()
 {

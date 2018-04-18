@@ -15,7 +15,7 @@ enum class EWaveState : uint8
 
 	WaitingToComplete,
 
-	waveComplete,
+	WaveComplete,
 
 	GameOver,
 
@@ -44,11 +44,11 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "GameState")
 	void WaveStateChanged(EWaveState OldState, EWaveState NewState);
 
-public:
-
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_WaveState, Category = "GameState")
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_WaveState, Category = "GameState")
 	EWaveState WaveState;
-	
 
+public:
+	
+	void SetWaveState(EWaveState NewState);
 	
 };

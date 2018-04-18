@@ -79,7 +79,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
 	int MaxPowerLevel;
 
+	UPROPERTY(ReplicatedUsing=OnRep_PowerLevel)
 	int PowerLevel;
+
+	UFUNCTION()
+	void OnRep_PowerLevel();
 
 	UMaterialInstanceDynamic* MatInst;
 
