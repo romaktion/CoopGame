@@ -29,29 +29,25 @@ AShooterWeapon::AShooterWeapon()
 	MuzzleSocketName = "MuzzleSocket";
 	TracerTargetName = "Target";
 
-	BaseDamage = 20.0f;
-	FireRate = 300.0f;
-	RestoreAccuracySpeed = 5.0f;
-	SpreadingRate = 1.3f;
-	MaxSpreadAngle = 3.5f;
 	AccuracyOfGuidance = 0.9f;
-	ClipSize = 20;
+	CurrentBulletAmount = 0.0f;
+	QueueAmount = 0.0f;
 
 	SetReplicates(true);
 	NetUpdateFrequency = 66.0f;
 	MinNetUpdateFrequency = 33.0f;
 }
 
+void AShooterWeapon::OnConstruction(const FTransform& Transform)
+{
+	CurrentBulletAmount = WeaponData.ClipSize;
+	QueueAmount = WeaponData.MinSpreadAngle;
+}
+
 void AShooterWeapon::BeginPlay()
 {
 	Super::BeginPlay();
 
-	DelayBetweenShots = 60 / FireRate;
-
-	if (Role == ROLE_Authority)
-	{
-		CurrentBulletAmount = ClipSize;
-	}
 }
 
 void AShooterWeapon::Fire()
@@ -112,7 +108,7 @@ void AShooterWeapon::Fire()
 				AActor* HitActor = Hit.GetActor();
 				SurfaceType = UPhysicalMaterial::DetermineSurfaceType(Hit.PhysMaterial.Get());
 
-				float ActualDamage = BaseDamage;
+				float ActualDamage = WeaponData.Damage;
 				if (SurfaceType == SURFACE_FLASHVULNARABLE)
 				{
 					ActualDamage *= 4.0f;
@@ -132,7 +128,7 @@ void AShooterWeapon::Fire()
 
 			if (!GetWorldTimerManager().IsTimerActive(TimerHandle_QueueAccum))
 			{
-				QueueAmount = SpreadingRate;
+				QueueAmount = WeaponData.MinSpreadAngle + WeaponData.SpreadingRate;
 
 				GetWorldTimerManager().SetTimer(TimerHandle_QueueAccum, this, &AShooterWeapon::QueueAccum, GetWorld()->DeltaTimeSeconds, true);
 			}
@@ -140,7 +136,7 @@ void AShooterWeapon::Fire()
 			{
 				AShooterCharacter* MyOwnerCasted = Cast<AShooterCharacter>(MyOwner);
 
-				float MaxAngle = MaxSpreadAngle;
+				float MaxAngle = WeaponData.MaxSpreadAngle;
 
 				if (MyOwnerCasted)
 				{
@@ -158,15 +154,15 @@ void AShooterWeapon::Fire()
 
 				if (QueueAmount < MaxAngle)
 				{
-					QueueAmount += SpreadingRate;
+					QueueAmount += WeaponData.SpreadingRate;
 				}
 				else
 				{
-					QueueAmount -= SpreadingRate;
+					QueueAmount -= WeaponData.SpreadingRate;
 					
-					if (QueueAmount < 0)
+					if (QueueAmount < WeaponData.MinSpreadAngle)
 					{
-						QueueAmount = 0;
+						QueueAmount = WeaponData.MinSpreadAngle;
 					}
 				}
 			}
@@ -213,9 +209,9 @@ bool AShooterWeapon::ServerReload_Validate()
 
 void AShooterWeapon::QueueAccum()
 {
-	QueueAmount -= RestoreAccuracySpeed * (GetWorld()->DeltaTimeSeconds);
+	QueueAmount -= WeaponData.RestoreAccuracySpeed * (GetWorld()->DeltaTimeSeconds);
 
-	if (QueueAmount <= 0)
+	if (QueueAmount <= WeaponData.MinSpreadAngle)
 	{
 		GetWorldTimerManager().ClearTimer(TimerHandle_QueueAccum);
 	}
@@ -223,8 +219,10 @@ void AShooterWeapon::QueueAccum()
 
 void AShooterWeapon::StartFire()
 {
-	if (bAutomaticFire)
+	if (WeaponData.bAutomaticFire)
 	{
+		float DelayBetweenShots = 60 / WeaponData.FireRate;
+
 		float FirstDelay = FMath::Max(DelayBetweenShots - (GetWorld()->TimeSeconds - LastTimeFire), 0.0f);
 
 	    GetWorldTimerManager().SetTimer(TimerHandle_TimeBetweenShots, this, &AShooterWeapon::Fire, DelayBetweenShots, true, FirstDelay);
@@ -245,7 +243,7 @@ void AShooterWeapon::Reload()
 {
 	if (Role == ROLE_Authority)
 	{
-		CurrentBulletAmount = ClipSize;
+		CurrentBulletAmount = WeaponData.ClipSize;
 	}
 	else if (Role < ROLE_Authority)
 	{
@@ -253,6 +251,7 @@ void AShooterWeapon::Reload()
 	}
 	
 }
+
 
 void AShooterWeapon::PlayShotEffects(FVector TracerTargetLocation)
 {
@@ -280,8 +279,10 @@ void AShooterWeapon::PlayShotEffects(FVector TracerTargetLocation)
 		if (MyOwner && MyOwner->IsLocallyControlled())
 		{
 			APlayerController * PC = Cast<APlayerController>(MyOwner->GetController());
-
-			PC->ClientPlayCameraShake(CameraShakeClass);
+			if (PC)
+			{
+				PC->ClientPlayCameraShake(CameraShakeClass);
+			}
 		}
 	}
 

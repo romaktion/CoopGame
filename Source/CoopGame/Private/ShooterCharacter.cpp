@@ -11,6 +11,7 @@
 #include "CoopGame.h"
 #include "Components/CapsuleComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 AShooterCharacter::AShooterCharacter()
@@ -48,14 +49,19 @@ void AShooterCharacter::BeginPlay()
 
 	if (Role == ROLE_Authority)
 	{
-		FActorSpawnParameters SpawnParametrs;
-		SpawnParametrs.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		SpawnParametrs.Owner = this;
+		FTransform Transform;
+		Transform.SetLocation(FVector::ZeroVector);
+		Transform.SetRotation((FRotator::ZeroRotator).Quaternion());
+		Transform.SetScale3D(FVector(1, 1, 1));
 
-		CurrentWeapon = GetWorld()->SpawnActor<AShooterWeapon>(DefaultWeaponClass, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParametrs);
+		CurrentWeapon = GetWorld()->SpawnActorDeferred<AShooterWeapon>(DefaultWeaponClass, Transform, this, this, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
 		if (CurrentWeapon)
 		{
+			CurrentWeapon->WeaponData = WeaponData;
+
+			UGameplayStatics::FinishSpawningActor(CurrentWeapon, Transform);
+
 			CurrentWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocketName);
 		}
 	}
@@ -156,7 +162,7 @@ void AShooterCharacter::StartReloadWeapon()
 
 	if (CurrentWeapon)
 	{
-		if (CurrentWeapon->CurrentBulletAmount < CurrentWeapon->ClipSize &&
+		if (CurrentWeapon->CurrentBulletAmount < CurrentWeapon->WeaponData.ClipSize &&
 			!GetWorldTimerManager().IsTimerActive(TimerHandle_Reload))
 		{
 			if (Role == ROLE_Authority)

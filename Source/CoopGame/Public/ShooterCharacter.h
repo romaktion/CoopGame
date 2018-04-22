@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "ShooterWeapon.h"
 #include "ShooterCharacter.generated.h"
 
 class AShooterWeapon;
@@ -11,6 +12,8 @@ class UCameraComponent;
 class USpringArmComponent;
 class UAnimMontage;
 class UShooterHealthComponent;
+struct FWeaponData;
+
 
 
 UCLASS()
@@ -54,9 +57,7 @@ protected:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerStopZoom();
 
-	void StartFire();
-
-	void StopFire();
+	
 
 	void StartReloadWeapon();
 
@@ -81,6 +82,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player")
 	TSubclassOf<AShooterWeapon> DefaultWeaponClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Player")
+	FWeaponData WeaponData;
 
 	UPROPERTY(VisibleDefaultsOnly, Category = "Player")
 	FName WeaponSocketName;
@@ -109,6 +113,12 @@ public:
 
 	UFUNCTION()
 	void OnHealthChanged(UShooterHealthComponent* HealthComponent, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
+
+	UFUNCTION(BlueprintCallable, Category = "Player")
+	void StartFire();
+
+	UFUNCTION(BlueprintCallable, Category = "Player")
+	void StopFire();
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Player")
 	bool bDied;

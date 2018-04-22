@@ -13,6 +13,53 @@ class USoundBase;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FWeaponFireSignature);
 
+USTRUCT(BlueprintType)
+struct FWeaponData
+{
+	GENERATED_BODY()
+
+public:
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WeaponData")
+	float Damage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WeaponData")
+	float FireRate;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WeaponData")
+	float RestoreAccuracySpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WeaponData")
+	float MaxSpreadAngle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WeaponData")
+	float MinSpreadAngle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WeaponData")
+	float SpreadingRate;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WeaponData")
+	int32 ClipSize;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "WeaponData")
+	bool bAutomaticFire;
+
+	FWeaponData()
+	{
+		bAutomaticFire = true;
+		ClipSize = 20;
+		Damage = 20.0f;
+		FireRate = 300.0f;
+		MinSpreadAngle = 0.0f;
+		MaxSpreadAngle = 3.0f;
+		RestoreAccuracySpeed = 6.0f;
+		SpreadingRate = 1.4f;
+	}
+};
+
+
+
+
 USTRUCT()
 struct FHitScanTrace
 {
@@ -66,17 +113,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	TSubclassOf<UCameraShake> CameraShakeClass;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
-	float BaseDamage;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
-	bool bAutomaticFire;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon", meta = (EditCondition="bAutomaticFire"))
-	float FireRate;
-
-	float DelayBetweenShots;
-
 	FTimerHandle TimerHandle_TimeBetweenShots;
 
 	FTimerHandle TimerHandle_QueueAccum;
@@ -84,15 +120,6 @@ protected:
 	float LastTimeFire;
 
 	float QueueAmount;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
-	float RestoreAccuracySpeed;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
-	float MaxSpreadAngle;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
-	float SpreadingRate;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	float AccuracyOfGuidance;
@@ -139,7 +166,8 @@ public:
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Weapon")
 	int CurrentBulletAmount;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
-	int ClipSize;
+	FWeaponData WeaponData;
+
+	virtual void OnConstruction(const FTransform& Transform) override;
 
 };
