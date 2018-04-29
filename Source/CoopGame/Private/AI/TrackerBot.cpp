@@ -6,7 +6,7 @@
 #include "AI/Navigation/NavigationSystem.h"
 #include "AI/Navigation/NavigationPath.h"
 #include "GameFramework/Character.h"
-#include "DrawDebugHelpers.h"
+//#include "DrawDebugHelpers.h"
 #include "ShooterHealthComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Components/SphereComponent.h"
@@ -43,7 +43,7 @@ ATrackerBot::ATrackerBot()
 	ForceValue = 1500;
 	bUseVelocityChange = true;
 
-	ExplosionDamage = 40;
+	ExplosionDamage = 60;
 	ExplosionRadius = 300;
 	SightRadius = 2500;
 	DetectAIRadius = 500;
@@ -104,24 +104,58 @@ bool ATrackerBot::GetEnemy(AActor* &Enemy)
 
 	UKismetSystemLibrary::SphereOverlapActors(this, GetActorLocation(), SightRadius, ObjctTypes, FilterClass, IgnoreActors, OverlapedActors);
 
+	
+
 	if (OverlapedActors.Num() > 0)
 	{
-		Enemy = OverlapedActors[0];
+		int StartIndex = 0;
 
-		if (OverlapedActors.Num() > 1)
+		for (size_t i = 0; i < OverlapedActors.Num(); i++)
 		{
-			float minDist = (OverlapedActors[0]->GetActorLocation() - GetActorLocation()).Size();
+			UShooterHealthComponent* HC = Cast<UShooterHealthComponent>(OverlapedActors[i]->GetComponentByClass(UShooterHealthComponent::StaticClass()));
 
-			for (size_t i = 1; i < OverlapedActors.Num(); i++)
+			if (!UShooterHealthComponent::IsFriendly(OverlapedActors[i], this) &&
+				HC && HC->GetHealth() > 0)
+			{
+				StartIndex = i;
+				break;
+			}
+			else
+			{
+				if (i == OverlapedActors.Num() - 1)
+				{
+					return false;
+				}
+			}
+		}
+
+
+		Enemy = OverlapedActors[StartIndex];
+
+		if (OverlapedActors.Num() >StartIndex + 1)
+		{
+			float minDist = (OverlapedActors[StartIndex]->GetActorLocation() - GetActorLocation()).Size();
+
+			for (size_t i = StartIndex + 1; i < OverlapedActors.Num(); i++)
 			{
 				if ((OverlapedActors[i]->GetActorLocation() - GetActorLocation()).Size() < minDist)
 				{
 					ACharacter* MyChar = Cast<ACharacter>(OverlapedActors[i]);
 
-					if (MyChar)
+					UShooterHealthComponent* HC = Cast<UShooterHealthComponent>(OverlapedActors[i]->GetComponentByClass(UShooterHealthComponent::StaticClass()));
+
+					if (MyChar && !UShooterHealthComponent::IsFriendly(MyChar, this) && HC &&
+						HC->GetHealth() > 0)
 					{
 						minDist = (OverlapedActors[i]->GetActorLocation() - GetActorLocation()).Size();
 						Enemy = OverlapedActors[i];
+					}
+					else
+					{
+						if (i == OverlapedActors.Num() - 1)
+						{
+							return false;
+						}
 					}
 				}
 			}
@@ -187,13 +221,13 @@ void ATrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
 {
 	Super::NotifyActorBeginOverlap(OtherActor);
 
-	if (!bStartedSelfDestruction)
+	if (!bStartedSelfDestruction && !bExploded)
 	{
 		if (OtherActor)
 		{
 			AShooterCharacter* Char = Cast<AShooterCharacter>(OtherActor);
 
-			if (Char)
+			if (Char && !UShooterHealthComponent::IsFriendly(OtherActor, this))
 			{
 				if (Role == ROLE_Authority)
 				{
@@ -321,7 +355,7 @@ void ATrackerBot::Tick(float DeltaTime)
 			
 			MeshComp->AddForce(Direction, NAME_None, bUseVelocityChange);
 
-			DrawDebugSphere(GetWorld(), NextPathPoint, AcceptanceRadius / 4, 12, FColor::Yellow, false, 0);
+			//DrawDebugSphere(GetWorld(), NextPathPoint, AcceptanceRadius / 4, 12, FColor::Yellow, false, 0);
 		}
 		else
 		{

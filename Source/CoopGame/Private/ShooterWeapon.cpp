@@ -114,7 +114,7 @@ void AShooterWeapon::Fire()
 					ActualDamage *= 4.0f;
 				}
 
-				UGameplayStatics::ApplyPointDamage(HitActor, ActualDamage, ShootDirection, Hit, MyOwner->GetInstigatorController(), this, DamageType);
+				UGameplayStatics::ApplyPointDamage(HitActor, ActualDamage, ShootDirection, Hit, MyOwner->GetInstigatorController(), MyOwner, DamageType);
 
 				TracerTargetLocation = Hit.ImpactPoint;
 
